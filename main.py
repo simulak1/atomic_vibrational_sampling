@@ -76,10 +76,9 @@ def get_args():
 def main():
     
     args=get_args()
-    T=args.temperature
 
     # Sample configurations
-    configs=monte_carlo.metropolis(args,T)
+    configs=monte_carlo.metropolis(args)
         
     
 if __name__ == '__main__':
