@@ -1,6 +1,5 @@
 import argparse
-import parse_dynmat
-import monte_carlo
+import sampling
 
 def get_args():
 
@@ -19,58 +18,6 @@ def get_args():
         type=float
     )
 
-    args_parser.add_argument(
-        '--equil-step',
-        help="The number of equilibration steps.",
-        default=100,
-        type=int
-    )
-
-    args_parser.add_argument(
-	'--nstep',
-        help="The number of statistics accumulation steps.",
-        default=1000,
-        type=int
-    )
-
-    args_parser.add_argument(
-	'--decorr-period',
-        help="The number of Metropolis steps to run between saving configs..",
-        default=25,
-        type=int
-    )
-    
-    args_parser.add_argument(
-        '--disp-distr',
-        help="""
-        The probabilistic distribution out of which 
-        the displacements of atoms are proposed to the
-        Metropolis.
-        Options are: 
-        1) uniform
-        2) normal
-        default is uniform.
-        """,
-        default="uniform"
-    )
-
-    args_parser.add_argument(
-        '--pwidth',
-        help="""
-        A parameter to tune the probabilistic distribution
-        chosen for Metropolis. 
-        - In the case of uniform distribution,
-          the displacements will be chosen from an interval
-          latvec*[-pwidth,pwidth]. 
-        - In the case of the normal distribution, pwidth is
-          the width of the gaussian centered at zero. When
-          numbers are sampled out of the gaussian, the disp-
-          lacements will be the number*latvec.          
-        """,
-        default=0.1,
-        type=float
-    )
-    
     return args_parser.parse_args()
 
 def main():
@@ -78,7 +25,7 @@ def main():
     args=get_args()
 
     # Sample configurations
-    configs=monte_carlo.metropolis(args)
+    configs=sampling.sample_configurations(args)
         
     
 if __name__ == '__main__':

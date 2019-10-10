@@ -59,7 +59,7 @@ def parseDynMat(filename):
                 counter=counter+1
                     
         # Change frequencies from THz to angular freqs.
-        freqs=np.array(freqs,dtype=float)*10.0**12*2*3.141592653
+        freqs=np.array(freqs,dtype=float)*10.0**12*2*np.pi
 
         return freqs,eigenvec
 
