@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import scipy.special
 import parse_dynmat
 import matplotlib.pyplot as plt
 
@@ -15,24 +16,37 @@ def PnInv(prob,w,T):
     inv=1.0/(hbar*w/(kb*T))
     return -np.log(-prob+1)*inv
 
-def hermite_polynomial(n,x):
-    
-    h=0
-    if n%2==0: # parillinen
-       for l in range(n/2+1):
-           h+=((-1.0)**(0.5*n-l))/(1.0*math.factorial(2*l)*math.factorial(0.5*n-l))*(2.0*x)**(2.0*l)
-    else: # pariton
-        for l in range((n-1)/2+1):
-            h+=((-1)**(0.5*(n-1)-l))/(1.0*math.factorial(2*l+1)*math.factorial(0.5*(n-1)-l))*(2.0*x)**(2.0*l+1.0)
-    h*=1.0*math.factorial(n)
+def hermite_polynomial(N,X):
 
-    return h        
+    N1=N.shape[0]
+    N2=N.shape[1]
+
+    H=np.zeros((N1,N2))
+
+    for n1 in range(N1):
+        for n2 in range(N2):
+            h=0
+            n=N[n1,n2]
+            x=X[n1,n2]
+            if n%2==0: # parillinen
+                for l in range(n/2+1):
+                    h+=((-1.0)**(0.5*n-l))/(1.0*math.factorial(2*l)*math.factorial(0.5*n-l))*(2.0*x)**(2.0*l)
+            else: # pariton
+                for l in range((n-1)/2+1):
+                    h+=((-1)**(0.5*(n-1)-l))/(1.0*math.factorial(2*l+1)*math.factorial(0.5*(n-1)-l))*(2.0*x)**(2.0*l+1.0)
+            h*=1.0*math.factorial(n)
+            H[n1,n2]=h
+    return H
         
 def eigenstate(n,x):
-   
-    An = (2**n*math.factorial(n)*np.sqrt(np.pi))**-0.5
+    '''
+    n and x are [Nconfig,3*Natoms]-dimensional numpy arrays.
+    '''
+    
+    An = (2**n*scipy.special.factorial(n)*np.sqrt(np.pi))**-0.5
     
     return An * hermite_polynomial(n,x) * np.exp(-0.5*x**2)
+
 
 def print_output1(T,Ntypes,Natoms,latvec,La,Ra,Matoms,atomNames,omega,eigenvecs):
     print(" ")
@@ -77,36 +91,53 @@ def print_output1(T,Ntypes,Natoms,latvec,La,Ra,Matoms,atomNames,omega,eigenvecs)
 def sample_configurations(args):
 
     T=args.temperature
-    N_occ=args.num_occupation_configs
-    Nconf=args.num_displ
+    Nconf=args.num_configs
+
+    lim=args.sample_lim
     
     # Parse the dynamical matrix file
     Ntypes,Natoms,latvec,La,Ra,Matoms,atomNames,omega,eigenvecs=parse_dynmat.parseDynMat(args.filename)
 
     print_output1(T,Ntypes,Natoms,latvec,La,Ra,Matoms,atomNames,omega,eigenvecs)
 
-    masses=[]
-    for i in range(3*Natoms):
-        mass=Matoms[atomNames[i/3]]
-        masses.append(mass)
-   
+    # The relative squared norms of the eigenvecs
+    r2=np.zeros((3*Natoms,Natoms))
+    for i in range(Natoms):
+        r2[:,i]=np.sum(eigenvecs[:,i*3:(i+1)*3]*eigenvecs[:,i*3:(i+1)*3],axis=1)
 
-    ps=np.random.rand(N_occ,3*Natoms)
+    # Sample occupations 
+    ps=np.random.rand(Nconf,3*Natoms)
     occupations=PnInv(ps,omega,T)
-    #hist=np.histogram(occupations[:,0],bins=np.arange(40),normed=True)
-    #print(hist)
-
     occupations=occupations.astype(int)
-    print(occupations)
-    mode1=eigenstate()
+
+    # Create atomic displacements
+    hbar = 6.62607004*10**-34
+    displacements=lim*(-latvec+2*latvec*np.random.rand(Nconf,3*Natoms)) # Eigenvec displacements
     
-    #xx=np.arange(-1,1,0.05)*np.sqrt(masses[0]*omega[0]/hbar)*latvec
-    #phi=eigenstate(int(occupations[0]),xx)**2
-    #plt.plot(xx,phi,'r*-')
-    #plt.show()
-    #plt.plot(hist[0],'ro')
-    #plt.grid(True)
-    #plt.show()
+    # Wfn values
+    single_particle_wfn_values=np.ones((Nconf,3*Natoms))
+    for i in range(Natoms):
+        single_particle_wfn_values*=eigenstate(occupations,displacements*(np.sqrt(r2[:,i]*Matoms[atomNames[i]]*omega/hbar)))**2
+
+    wfn_values=[]
+    for i in range(Nconf):
+        phi=1
+        for j in range(3*Natoms):
+            phi*=single_particle_wfn_values[i,j]
+        wfn_values.append(phi)
+
+    accepted=[]
+    for i in range(Nconf):
+        if wfn_values[i]>np.random.rand():
+            accepted.append(i)
+
+    print("Number of trial configurations: {}".format(Nconf))
+    print("Accepted:                       {}".format(len(accepted)))
+        
+    
+    
+    
+    
 
         
 
