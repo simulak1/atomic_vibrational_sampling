@@ -1,6 +1,24 @@
 import numpy as np
 
-def parseDynMat(filename):
+def write_input(infile,outfile,Natoms,r):
+    with open(infile) as f:
+        lines=f.readlines()
+        for i in range(len(lines)):
+            words=lines[i].split()
+            if words[0]=="ATOMIC_POSITIONS":
+                index=i+1
+                break
+        with open(outfile,'w') as fo:
+            for i in range(len(lines)):
+                if i < index or i >= index+Natoms:
+                    fo.write(lines[i])
+                else:
+                    words=lines[i].split()
+                    fo.write(words[0]+" {} {} {}\n".format(r[i-index,0],r[i-index,1],r[i-index,2]))
+                    
+                    
+
+def parseDynMat(filename,Nfiles):
 
     def _readConstants(line):
         words=line.split()
@@ -63,20 +81,45 @@ def parseDynMat(filename):
 
         return freqs,eigenvec
 
-    # Parse the dynamical matrix file with the predefined functions
-    with open(filename) as f:
-        lines=f.readlines()
-        N=len(lines)
-        for i in range(N):
-            line=lines[i]
-            words=line.split()
-            if len(words)>0 and words[0]=="phonons":
-                Ntypes,Natoms,latvec=_readConstants(lines[i+1])
-            if len(words)>0 and words[0]=="Basis":
-                La,Ra,Matoms,atomNames = _readBasis(lines[i+1:i+4+Natoms+1],Natoms,Ntypes)
-            if len(words)>0 and words[0][:30]=="*"*30:
-                omega,eigenvecs=_readNormalModes(lines[i+1:],Natoms)
-                break
+    def _read_first_file(filename):
+        with open(filename) as f:
+            lines=f.readlines()
+            N=len(lines)
+            for i in range(N):
+                line=lines[i]
+                words=line.split()
+                if len(words)>0 and words[0]=="phonons":
+                    Ntypes,Natoms,latvec=_readConstants(lines[i+1])
+                if len(words)>0 and words[0]=="Basis":
+                    La,Ra,Matoms,atomNames = _readBasis(lines[i+1:i+4+Natoms+1],Natoms,Ntypes)
+                if len(words)>0 and words[0][:30]=="*"*30:
+                    omega,eigenvecs=_readNormalModes(lines[i+1:],Natoms)
+                    break
+            
+        return Ntypes,Natoms,latvec,La,Ra,Matoms,atomNames,omega,eigenvecs
+
+    def _read_k_file(filename):
+        with open(filename) as f:
+	    lines=f.readlines()
+            N=len(lines)
+            for i in range(N):
+                line=lines[i]
+                words=line.split()
+                if len(words)>0 and words[0][:30]=="*"*30:
+                    omega,eigenvecs=_readNormalModes(lines[i+1:],Natoms)
+                    break
+
+        return omega,eigenvecs
+
+    if Nfiles<2:
+        Ntypes,Natoms,latvec,La,Ra,Matoms,atomNames,omega,eigenvecs = _read_first_file(filename)
+    else:
+        Ntypes,Natoms,latvec,La,Ra,Matoms,atomNames,omega,eigenvecs = _read_first_file(filename+str(1))
+        for i in range(2,Nfiles+1):
+            om2,eig2=_read_k_file(filename+str(i))
+            eigenvecs=np.concatenate((eigenvecs,eig2),axis=0)
+            omega=np.concatenate((omega,om2),axis=0)
+    
 
     return Ntypes,Natoms,latvec,La,Ra,Matoms,atomNames,omega,eigenvecs
             
