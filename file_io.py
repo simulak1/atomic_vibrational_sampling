@@ -100,23 +100,23 @@ def parseDynMat(filename,Nfiles):
 
     def _read_k_file(filename):
         with open(filename) as f:
-	    lines=f.readlines()
+            lines=f.readlines()
             N=len(lines)
             for i in range(N):
                 line=lines[i]
                 words=line.split()
                 if len(words)>0 and words[0][:30]=="*"*30:
                     omega,eigenvecs=_readNormalModes(lines[i+1:],Natoms)
-                    break
-
-        return omega,eigenvecs
+                    return omega,eigenvecs
+    
 
     if Nfiles<2:
         Ntypes,Natoms,latvec,La,Ra,Matoms,atomNames,omega,eigenvecs = _read_first_file(filename)
     else:
         Ntypes,Natoms,latvec,La,Ra,Matoms,atomNames,omega,eigenvecs = _read_first_file(filename+str(1))
         for i in range(2,Nfiles+1):
-            om2,eig2=_read_k_file(filename+str(i))
+            print(i)
+            om2,eig2= _read_k_file(filename+str(i))
             eigenvecs=np.concatenate((eigenvecs,eig2),axis=0)
             omega=np.concatenate((omega,om2),axis=0)
     

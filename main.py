@@ -2,6 +2,7 @@ import argparse
 import numpy as np
 import sampling
 import file_io
+import sys
 
 def get_args():
 
@@ -80,18 +81,23 @@ def main():
     # Sample configurations
     configs,Natoms,latvec,La,Ra=sampling.sample_configurations(args)
 
+    R=latvec*np.matmul(Ra,La)
+    LaT=latvec*La.T
+    print("Atomic positions in cartesian coordinates:")
+    print(R)
+    print("")
     if args.write_output==1:
         index=0
         for conf in configs:
             r=np.zeros((Natoms,3))
             for i in range(Natoms):
-                atomind=i*3
-                x=conf[atomind]/(latvec*np.sqrt(La[0,0]**2+La[0,1]**2+La[0,2]**2))
-                y=conf[atomind+1]/(latvec*np.sqrt(La[1,0]**2+La[1,1]**2+La[1,2]**2))
-                z=conf[atomind+2]/(latvec*np.sqrt(La[2,0]**2+La[2,1]**2+La[2,2]**2))
-                r[i,0]=x+Ra[i,0]
-                r[i,1]=y+Ra[i,1]
-                r[i,2]=z+Ra[i,2]
+                r[i,:]=R[i,:]+conf[3*i:3*i+3]
+
+            ATAinv=np.linalg.inv(np.matmul(LaT.T,LaT))
+            MPinv=np.matmul(ATAinv,LaT.T)
+            r=np.dot(MPinv,r.T).T
+
+            
             file_io.write_input("in.pwscf",args.outdir+"/in.pwscf_{}".format(index),Natoms,r)
             index+=1
             

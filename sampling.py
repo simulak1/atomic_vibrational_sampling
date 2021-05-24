@@ -5,26 +5,39 @@ import scipy.special
 import file_io
 import matplotlib.pyplot as plt
 
-def Pn(n,w,T):
-    kb = 1.38064852*10**-23
-    hbar = 6.62607004*10**-34
+def pn(n,alpha):
+    return np.exp(-alpha*n)*(1-np.exp(-alpha))
 
-    return np.exp(-n*hbar*w/(kb*T))*(1-np.exp(-hbar*w/(kb*T)))
+def PN(N,alpha):
+    return 1-np.exp(-alpha*(N+1))
 
-def PnInv(prob,w,T):
-    kb = 1.38064852*10**-23
-    hbar = 6.62607004*10**-34
-    inv = kb*T/(hbar*w)
-    return -np.log(-prob+1)*inv
+def PNinv(prob,alpha,levels):
+
+    if(abs(1-prob)<0.0000000000001):
+        ind=0
+        while(abs(levels[ind]-1)>0.00000000000001):
+            ind+=1
+        return ind
+            
+    a1=alpha
+    a2=np.log(1-prob)
+
+    return -1*(a1+a2)/alpha
+
+def map2level(p,pn):
+    i=0
+    while(p>pn[i]):
+        i+=1
+    return pn[i]
 
 def hermite_polynomial(n,x):
 
     h=0
     if n%2==0: # parillinen
-        for l in range(n/2+1):
+        for l in range(int(n/2)+1):
             h+=((-1.0)**(0.5*n-l))/(1.0*math.factorial(2*l)*math.factorial(0.5*n-l))*(2.0*x)**(2.0*l)
     else: # pariton
-        for l in range((n-1)/2+1):
+        for l in range(int((n-1)/2)+1):
             h+=((-1)**(0.5*(n-1)-l))/(1.0*math.factorial(2*l+1)*math.factorial(0.5*(n-1)-l))*(2.0*x)**(2.0*l+1.0)
     h*=1.0*math.factorial(n)
     return h
@@ -40,6 +53,10 @@ def eigenstate(n,x):
 
 
 def print_output1(T,Ntypes,Natoms,latvec,La,Ra,Matoms,atomNames,omega,eigenvecs):
+
+    kb = 1.38064852*10**-23
+    hbar = 6.62607004*10**-34
+
     print(" ")
     print("="*30+" Sample vibrational configurations "+"="*30)
     print(" ")
@@ -67,15 +84,16 @@ def print_output1(T,Ntypes,Natoms,latvec,La,Ra,Matoms,atomNames,omega,eigenvecs)
     print(eigenvecs)
     print("-"*80)
     print("Normal mode excitation probabilities(%):")
-    string="n"+" "*12
-    for i in range(Natoms*3):
-        string+="w"+str(i)+" "*14
+    string="n"+" "*10
+    for i in range(8):
+        string+=str(i)+" "*10
     print(string)
-    for i in range(10):
-        string=str(i)
-        for j in range(Natoms*3):
-            value="{:.2f}".format(100.0*Pn(i,omega[j],T))
-            value=value.rjust(16," ")
+    for i in range(3,eigenvecs.shape[0]):
+        string="f"+str(i)
+        for j in range(8):
+            alpha=hbar*omega[i]/(kb*T)
+            value="{:.2f}".format(100.0*pn(j,alpha))
+            value=value.rjust(11," ")
             string+=value#str(100.0*Pn(i,omega[j],T))+" "*10
         print(string)
 
@@ -99,30 +117,43 @@ def sample_configurations(args):
     lim=args.sample_lim
 
     hbar = 6.62607004*10**-34
+    kb = 1.38064852*10**-23
     
     # Parse the dynamical matrix file
     Ntypes,Natoms,latvec,La,Ra,Matoms,atomNames,omega,eigenvecs=file_io.parseDynMat(args.filename,args.nfiles)
 
     masses=np.zeros((3*Natoms,))
-    for i in range(3*Natoms):
-        masses[i]=Matoms[atomNames[i/3]]
+
+    ind=0
+    for i in range(Natoms):
+        for j in range(3):
+            masses[ind]=Matoms[atomNames[i]]
+            ind+=1
     
     print_output1(T,Ntypes,Natoms,latvec,La,Ra,Matoms,atomNames,omega,eigenvecs)
-
+    
     configs=[]
 
     for i in range(Nconf):
         r=np.zeros((3*Natoms,))
         for j in range(3,eigenvecs.shape[0]):
-            
-            # Sample occupation 
-            n=int(PnInv(np.random.rand(),omega[j],T))
 
-            # Sample displacements
+            alpha=hbar*omega[j]/(kb*T)
+            # Sample occupation
+            cumulative_values=PN(np.arange(0,100),alpha)
+            randi=np.random.rand()
+            cumulative_sample_value=map2level(randi,cumulative_values)
+            if(T<0.000000001):
+                n=0
+            else:
+                n=np.rint(PNinv(cumulative_sample_value,alpha,cumulative_values))
+
+            # Sample displacements in units of sqrt(hbar/(m*omega))
             q=sample_q(lim,n)
             
             # Multiply eigenvec, add to total displacement
             r+=q*eigenvecs[j]/np.sqrt(masses*omega[j]/hbar)
+            
         configs.append(r)
 
     return configs,Natoms,latvec,La,Ra
