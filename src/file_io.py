@@ -21,6 +21,11 @@ def write_input(infile,outfile,Natoms,r):
 def parseDynMat(filename,Nfiles):
 
     def _readConstants(line):
+        '''
+        Parses the Lattice- and simulation cell-specific constants
+        from the given lines extracted from the dynamical matrix file
+        given by Quantum Espressos PHONON package.
+        '''
         words=line.split()
         Ntypes=int(words[0])
         Natoms=int(words[1])
@@ -29,6 +34,11 @@ def parseDynMat(filename,Nfiles):
         return Ntypes,Natoms,latvec
     
     def _readBasis(lines,Natoms,Ntypes):
+        '''
+        Parses the Lattice- and simulation cell-specific information
+        from the given lines extracted from the dynamical matrix file
+        given by Quantum Espressos PHONON package.
+        '''
         A=np.zeros((3,3))
         for i in [0,1,2]:
             words=lines[i].split()
@@ -61,6 +71,11 @@ def parseDynMat(filename,Nfiles):
         return A,atompos,atom_masses,atomtypes
 
     def _readNormalModes(lines,Natoms):
+        '''
+        Parses the eigenfrequencies and -modes from the given lines, 
+        which are in the Quantum Espresso PHONON format of the dynamical 
+        matrix files. 
+        '''
         freqs=[]
         eigenvec=np.zeros((3*Natoms,3*Natoms))
         counter=0
@@ -82,6 +97,11 @@ def parseDynMat(filename,Nfiles):
         return freqs,eigenvec
 
     def _read_first_file(filename):
+        '''
+        Reads the file "dyn0", and returns simulation cell lattice vectors, 
+        atomic positions, atomic masses, atom names, number of atoms, atom types,
+        and finally returns the eigenfrequencies and -modes. 
+        '''
         with open(filename) as f:
             lines=f.readlines()
             N=len(lines)
@@ -99,6 +119,9 @@ def parseDynMat(filename,Nfiles):
         return Ntypes,Natoms,latvec,La,Ra,Matoms,atomNames,omega,eigenvecs
 
     def _read_k_file(filename):
+        '''
+        Returns the eigenfrequencies and -modes included in the file "filename".
+        '''
         with open(filename) as f:
             lines=f.readlines()
             N=len(lines)
@@ -109,6 +132,7 @@ def parseDynMat(filename,Nfiles):
                     omega,eigenvecs=_readNormalModes(lines[i+1:],Natoms)
                     return omega,eigenvecs
     
+
 
     if Nfiles<2:
         Ntypes,Natoms,latvec,La,Ra,Matoms,atomNames,omega,eigenvecs = _read_first_file(filename)
