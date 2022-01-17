@@ -59,11 +59,20 @@ def get_args():
         1: Write QE input files from sampled configurations.
         0: Don't.
 
-        If 1 is chosen, you need to have a sample in.pwscf-file at the path where 
-        you are executing this script.
         """,
         default=0,
         type=int
+    )
+
+    args_parser.add_argument(
+        '--qe-input',
+        help=
+        """
+        File of the QE pwscf input that will be rewritten for each 
+        sampled configuration.
+        """,
+        default="in.pwscf",
+        type=str
     )
     
     args_parser.add_argument(
@@ -98,7 +107,7 @@ def main():
             r=np.dot(MPinv,r.T).T
 
             
-            file_io.write_input("in.pwscf",args.outdir+"/in.pwscf_{}".format(index),Natoms,r)
+            file_io.write_input(args.qe_input,args.outdir+"/"+args.qe_input.split("/")[-1]+"_{}".format(index),Natoms,r)
             index+=1
             
 if __name__ == '__main__':
