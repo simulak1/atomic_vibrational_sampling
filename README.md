@@ -16,13 +16,13 @@ A program to read in normal modes of vibrations in an atomic structure, solved b
 
 6) `python src/main.py --outdir . --filename examples/silicon_8atoms/dyn --nfiles 1 --temperature 0 --sample-lim 1 --num-configs 10 --write-output 1 --qe-input examples/silicon_8atoms/in.pwscf`
 
-## Theory and practice
+## About this program
 
 ### Overview
 
 Atoms are in constant motion, even at zero temperature. This program in essence takes images of atomic positions of given systems, and saves the images into PWSCF input files. Thus the images will be statistically distributed according to the atomic motion, and with infinite amount of image the atomic trajectories would be perfectly known. The PWSCF inputs can be used to run parallel simulations, and gather statstics on, e.g. energy differences between static equilibrium structures and the dynamic vibrating systems. While some vibrational properties of simulated systems can be analysed with the normal modes solved by PHONON-package (or any vibrational analysis tool), some features of the systems cannot be analysed with existing methods.
 
-### Theory
+### Working principles
 
 This program starts from the normal modes of a given atomic system, solved by density functional perturbation theory as implemented in Quantum Espresso's PWSCF and PHONON packages. The PHONON package uses the self-consistent charge density and Kohn-Sham orbitals as given by PWSCF. More information can be found [here](http://www.fisica.uniud.it/~giannozz/Didattica/MetNum/2010/phonons.html)
 
